@@ -1,35 +1,54 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/antchfx/htmlquery"
 	"github.com/gocolly/colly"
+	"log"
 )
 
 func main() {
-	var identityNumber int
-	var answer string
+	var identityNumber string
 
-	fmt.Scan(&identityNumber)
-
-	answer = searchByIdentity(identityNumber)
-
-	if len(answer) == 0 {
-		fmt.Print("Answer is empty")
+	_, err := fmt.Scan(&identityNumber)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	fmt.Printf("Порядковый номер: %s", searchByIdentity(identityNumber))
 }
 
-func searchByIdentity(identityNumber int) string {
-	var answer string
+func searchByIdentity(identityNumber string) string {
+	var d string
 
 	xPath := "//*[contains(@class, 'RatingPage_table__position')]"
-	url := "abit.itmo.ru/rating/master/budget/1905"
+	url := "https://abit.itmo.ru/rating/master/budget/1905"
 	c := colly.NewCollector()
 
-	c.Visit(url)
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		r := bytes.NewReader(e.Response.Body)
+		doc, err := htmlquery.Parse(r)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	c.OnHTML(xPath, func(collyElement *colly.HTMLElement) {
-		answer = collyElement.Text
+		nodes, err := htmlquery.QueryAll(doc, xPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, node := range nodes {
+			if spanData := node.LastChild.FirstChild.Data; spanData == identityNumber {
+				d = node.FirstChild.Data
+			}
+		}
 	})
 
-	return answer
+	// Start scraping
+	err := c.Visit(url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return d
 }

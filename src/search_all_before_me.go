@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/antchfx/htmlquery"
 	"github.com/gocolly/colly"
+	"log"
 )
 
 func main() {
@@ -19,17 +21,30 @@ func main() {
 }
 
 func searchByIdentity(identityNumber int) string {
-	var answer string
-
 	xPath := "//*[contains(@class, 'RatingPage_table__position')]"
 	url := "abit.itmo.ru/rating/master/budget/1905"
 	c := colly.NewCollector()
 
-	c.Visit(url)
+	c.OnHTML("body", func(e *colly.HTMLElement) {
+		// Load the HTML content into an XPath queryable context
+		doc, err := htmlquery.Parse(e.Response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	c.OnHTML(xPath, func(collyElement *colly.HTMLElement) {
-		answer = collyElement.Text
+		nodes, err := htmlquery.QueryAll(doc, xPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, node := range nodes {
+			fmt.Println(htmlquery.SelectAttr(node, "span"))
+		}
 	})
 
-	return answer
+	// Start scraping
+	err := c.Visit(url)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

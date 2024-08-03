@@ -41,6 +41,7 @@ func searchByIdentity(identityNumber string) string {
 		for _, node := range nodes {
 			if spanData := node.LastChild.FirstChild.Data; spanData == identityNumber {
 				d = node.FirstChild.Data
+				return
 			}
 		}
 	})

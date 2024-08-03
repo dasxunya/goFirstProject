@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/antchfx/htmlquery"
 	"github.com/gocolly/colly"
@@ -8,26 +9,26 @@ import (
 )
 
 func main() {
-	var identityNumber int
-	var answer string
+	var identityNumber string
 
-	fmt.Scan(&identityNumber)
-
-	answer = searchByIdentity(identityNumber)
-
-	if len(answer) == 0 {
-		fmt.Print("Answer is empty")
+	_, err := fmt.Scan(&identityNumber)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	fmt.Printf("Порядковый номер: %s", searchByIdentity(identityNumber))
 }
 
-func searchByIdentity(identityNumber int) string {
+func searchByIdentity(identityNumber string) string {
+	var d string
+
 	xPath := "//*[contains(@class, 'RatingPage_table__position')]"
-	url := "abit.itmo.ru/rating/master/budget/1905"
+	url := "https://abit.itmo.ru/rating/master/budget/1905"
 	c := colly.NewCollector()
 
 	c.OnHTML("body", func(e *colly.HTMLElement) {
-		// Load the HTML content into an XPath queryable context
-		doc, err := htmlquery.Parse(e.Response.Body)
+		r := bytes.NewReader(e.Response.Body)
+		doc, err := htmlquery.Parse(r)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -38,7 +39,9 @@ func searchByIdentity(identityNumber int) string {
 		}
 
 		for _, node := range nodes {
-			fmt.Println(htmlquery.SelectAttr(node, "span"))
+			if spanData := node.LastChild.FirstChild.Data; spanData == identityNumber {
+				d = node.FirstChild.Data
+			}
 		}
 	})
 
@@ -47,4 +50,5 @@ func searchByIdentity(identityNumber int) string {
 	if err != nil {
 		log.Fatal(err)
 	}
+	return d
 }
